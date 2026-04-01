@@ -17,6 +17,7 @@ let package = Package(
             name: "Muxy",
             dependencies: ["GhosttyKit"],
             path: "Muxy",
+            exclude: ["Info.plist", "Muxy.entitlements"],
             resources: [
                 .process("Resources"),
             ],
