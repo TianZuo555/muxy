@@ -1,0 +1,131 @@
+import SwiftUI
+
+struct ThemePicker: View {
+    @State private var themes: [ThemePreview] = []
+    @State private var searchText = ""
+    @State private var currentTheme: String?
+    @State private var highlightedIndex: Int?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(MuxyTheme.fgMuted)
+                    .font(.system(size: 12))
+                TextField("Search themes", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(MuxyTheme.fg)
+                    .onSubmit { confirmSelection() }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+
+            Divider().overlay(MuxyTheme.border)
+
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(filteredThemes.enumerated()), id: \.element.id) { index, theme in
+                            ThemeRow(
+                                theme: theme,
+                                isActive: theme.name == currentTheme,
+                                isHighlighted: index == highlightedIndex,
+                                onSelect: { selectTheme(theme) }
+                            )
+                            .id(theme.id)
+                        }
+                    }
+                }
+                .onChange(of: highlightedIndex) { _, newIndex in
+                    guard let newIndex, newIndex < filteredThemes.count else { return }
+                    proxy.scrollTo(filteredThemes[newIndex].id, anchor: nil)
+                }
+            }
+        }
+        .frame(width: 280, height: 400)
+        .background(MuxyTheme.bg)
+        .onKeyPress(.upArrow) { moveHighlight(-1); return .handled }
+        .onKeyPress(.downArrow) { moveHighlight(1); return .handled }
+        .onKeyPress(.return) { confirmSelection(); return .handled }
+        .onChange(of: searchText) { highlightedIndex = filteredThemes.isEmpty ? nil : 0 }
+        .task {
+            themes = await ThemeService.shared.loadThemes()
+            currentTheme = ThemeService.shared.currentThemeName()
+        }
+    }
+
+    private var filteredThemes: [ThemePreview] {
+        guard !searchText.isEmpty else { return themes }
+        return themes.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    private func moveHighlight(_ delta: Int) {
+        let list = filteredThemes
+        guard !list.isEmpty else { return }
+        guard let current = highlightedIndex else {
+            highlightedIndex = delta > 0 ? 0 : list.count - 1
+            return
+        }
+        highlightedIndex = max(0, min(list.count - 1, current + delta))
+    }
+
+    private func confirmSelection() {
+        let list = filteredThemes
+        guard let index = highlightedIndex, index < list.count else { return }
+        selectTheme(list[index])
+    }
+
+    private func selectTheme(_ theme: ThemePreview) {
+        currentTheme = theme.name
+        ThemeService.shared.applyTheme(theme.name)
+    }
+}
+
+private struct ThemeRow: View {
+    let theme: ThemePreview
+    let isActive: Bool
+    let isHighlighted: Bool
+    let onSelect: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 2) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(nsColor: theme.background))
+                    .frame(width: 16, height: 16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .strokeBorder(MuxyTheme.border, lineWidth: 1)
+                    )
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(nsColor: theme.foreground))
+                    .frame(width: 16, height: 16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .strokeBorder(MuxyTheme.border, lineWidth: 1)
+                    )
+            }
+
+            Text(theme.name)
+                .font(.system(size: 12))
+                .foregroundStyle(MuxyTheme.fg)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            if isActive {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(isHighlighted ? MuxyTheme.surface : (hovered ? MuxyTheme.hover : .clear))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onSelect)
+        .onHover { hovered = $0 }
+    }
+}

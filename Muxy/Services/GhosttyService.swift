@@ -2,14 +2,15 @@ import Foundation
 import AppKit
 import GhosttyKit
 
-@MainActor
+@MainActor @Observable
 final class GhosttyService {
     static let shared = GhosttyService()
 
-    private(set) var app: ghostty_app_t?
-    private(set) var config: ghostty_config_t?
-    private var tickTimer: Timer?
-    private let runtimeEvents: any GhosttyRuntimeEventHandling = GhosttyRuntimeEventAdapter()
+    @ObservationIgnored private(set) var app: ghostty_app_t?
+    @ObservationIgnored private(set) var config: ghostty_config_t?
+    private(set) var configVersion = 0
+    @ObservationIgnored private var tickTimer: Timer?
+    @ObservationIgnored private let runtimeEvents: any GhosttyRuntimeEventHandling = GhosttyRuntimeEventAdapter()
 
     private init() {
         initializeGhostty()
@@ -95,6 +96,19 @@ final class GhosttyService {
             blue: CGFloat(color.b) / 255,
             alpha: 1
         )
+    }
+
+    func reloadConfig() {
+        guard let app else { return }
+        guard let newConfig = ghostty_config_new() else { return }
+        ghostty_config_load_default_files(newConfig)
+        ghostty_config_load_recursive_files(newConfig)
+        ghostty_config_finalize(newConfig)
+        ghostty_app_update_config(app, newConfig)
+        let oldConfig = self.config
+        self.config = newConfig
+        if let oldConfig { ghostty_config_free(oldConfig) }
+        configVersion += 1
     }
 
     func tick() {

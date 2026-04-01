@@ -23,8 +23,8 @@ struct MuxyApp: App {
             MainWindow()
                 .environment(appState)
                 .environment(projectStore)
+                .environment(GhosttyService.shared)
                 .preferredColorScheme(.dark)
-                .background(WindowConfigurator())
         }
         .windowStyle(HiddenTitleBarWindowStyle())
         .defaultSize(width: 1200, height: 800)
@@ -54,7 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-private struct WindowConfigurator: NSViewRepresentable {
+struct WindowConfigurator: NSViewRepresentable {
+    let configVersion: Int
+
     func makeNSView(context: Context) -> NSView {
         let v = NSView()
         DispatchQueue.main.async {
@@ -73,5 +75,8 @@ private struct WindowConfigurator: NSViewRepresentable {
         }
         return v
     }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        nsView.window?.backgroundColor = MuxyTheme.nsBg
+    }
 }

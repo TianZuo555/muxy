@@ -3,11 +3,14 @@ import SwiftUI
 struct Sidebar: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
+    @State private var showThemePicker = false
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
+                IconButton(symbol: "paintpalette") { showThemePicker.toggle() }
+                    .popover(isPresented: $showThemePicker) { ThemePicker() }
                 IconButton(symbol: "plus") { addProject() }
             }
             .padding(.horizontal, 10)

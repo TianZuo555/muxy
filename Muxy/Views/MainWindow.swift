@@ -3,6 +3,7 @@ import SwiftUI
 struct MainWindow: View {
     @Environment(AppState.self) private var appState
     @Environment(ProjectStore.self) private var projectStore
+    @Environment(GhosttyService.self) private var ghostty
 
     var body: some View {
         HStack(spacing: 0) {
@@ -22,7 +23,9 @@ struct MainWindow: View {
                 }
             }
         }
+        .id(ghostty.configVersion)
         .background(MuxyTheme.bg)
+        .background(WindowConfigurator(configVersion: ghostty.configVersion))
         .edgesIgnoringSafeArea(.top)
         .onAppear {
             appState.restoreSelection(projects: projectStore.projects)
